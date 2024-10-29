@@ -28,8 +28,8 @@ Extrae la siguiente información clave de este texto de factura:
 2.Fecha desde: Fecha de inicio del período de facturación, en formato YYYY-MM-DD.
 3.Fecha hasta: Fecha de finalización del período de facturación, en formato YYYY-MM-DD.
 4.Consumo en kWh: Total de consumo medido en kWh. Nota: Si el consumo aparece en MWh, conviértelo a kWh (1 MWh = 1000 kWh).
-5. Cuota fija sin IVA: Importe fijo en euros sin IVA.
-6.Cuota variable sin IVA (Consumo gas): Importe variable asociado al consumo de gas, en euros sin IVA.
+5. Cuota fija sin IVA: Importe fijo en euros sin IVA. Nota: Si el campo está ausente, asigna 0 para indicar que no hubo Cuota fija.
+6.Cuota variable sin IVA (Consumo gas): Importe variable asociado al consumo de gas, en euros sin IVA. Nota: Si el campo está ausente, asigna 0 para indicar que no hubo Cuota variable.
 7.Alquiler del contador sin IVA: Importe del alquiler del contador en euros sin IVA. Nota: Si el campo está ausente, asigna 0 para indicar que no hubo alquiler de contador.
 8.Impuesto especial sobre hidrocarburos sin IVA: Valor del impuesto sobre hidrocarburos en euros sin IVA. Nota: Si no se menciona este campo, asigna 0 ya que es un campo opcional.
 9.Descuento en gas: Descuento aplicado al consumo de gas, en euros sin IVA. Nota: Si el campo está ausente, asigna 0 para indicar que no hubo descuento.
