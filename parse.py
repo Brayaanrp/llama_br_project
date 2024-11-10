@@ -1,21 +1,29 @@
 import os
+import logging
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from llama_parse import LlamaParse
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 
+# Configuración de logging para capturar errores en un archivo log
+logging.basicConfig(filename="error.log", level=logging.ERROR, format="%(asctime)s - %(levelname)s - %(message)s")
+
 # Inicializar FastAPI
 app = FastAPI()
 
-# Obtener las claves API desde las variables de entorno de Railway
+# Obtener claves API desde las variables de entorno
 llama_api_key = os.getenv("LLAMA_CLOUD_API_KEY")
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
-# Clase para el modelo de solicitud de procesamiento de documentos
+# Verificar que las claves API están configuradas correctamente
+if not llama_api_key or not openai_api_key:
+    logging.error("Las claves de API no están configuradas correctamente en el entorno.")
+    raise ValueError("Las claves de API no están configuradas.")
+
+# Modelos de datos para las solicitudes
 class DocumentRequest(BaseModel):
     file_path: str  # Ruta del archivo PDF a procesar
 
-# Clase para el modelo de solicitud de consulta
 class QueryRequest(BaseModel):
     query: str  # Consulta para extraer datos específicos del documento procesado
 
@@ -27,8 +35,13 @@ query_engine = None
 async def process_file(request: DocumentRequest):
     global query_engine
     try:
+        # Verificar si el archivo existe en la ruta especificada
+        if not os.path.isfile(request.file_path):
+            logging.error(f"Archivo no encontrado en la ruta: {request.file_path}")
+            raise HTTPException(status_code=400, detail="Archivo no encontrado en la ruta especificada.")
+        
         # Configurar el parser
-        parser = LlamaParse(result_type="text")  # Cambia "markdown" a "text" si prefieres solo texto.
+        parser = LlamaParse(result_type="text")
         
         # Leer y parsear el archivo PDF
         file_extractor = {".pdf": parser}
@@ -40,8 +53,10 @@ async def process_file(request: DocumentRequest):
         # Crear un motor de consulta y almacenarlo globalmente
         query_engine = index.as_query_engine()
 
+        logging.info("Archivo procesado exitosamente")
         return {"message": "Archivo procesado exitosamente"}
     except Exception as e:
+        logging.error("Error en el endpoint /process: %s", str(e))
         raise HTTPException(status_code=500, detail=f"Error al procesar el archivo: {str(e)}")
 
 # Endpoint para realizar una consulta en el documento ya procesado
@@ -50,9 +65,10 @@ async def query_document(request: QueryRequest):
     try:
         # Verificar si el motor de consulta está disponible
         if query_engine is None:
+            logging.error("Intento de consulta sin procesar ningún documento")
             raise HTTPException(status_code=400, detail="No se ha procesado ningún documento aún.")
 
-        # Instrucción completa para consulta
+        # Instrucción completa para la consulta
         query = """
 Instrucciones para extraer datos de facturas de gas y electricidad:
 
@@ -199,7 +215,16 @@ Nota: Reemplaza "[INSERTAR AQUÍ EL TEXTO REAL DE LA FACTURA]" con el texto de l
 """
         
         # Realizar la consulta en el documento
-        response = query_engine.query(query)
+        try:
+            response = query_engine.query(query)
+            logging.info("Consulta realizada exitosamente")
+        except Exception as e:
+            logging.error("Error en query_engine.query: %s", str(e))
+            raise HTTPException(status_code=500, detail=f"Error en la consulta del motor: {str(e)}")
+
         return {"response": response}
     except Exception as e:
+        logging.error("Error en el endpoint /query: %s", str(e))
+        raise HTTPException(status_code=500, detail=f"Error al realizar la consulta: {str(e)}")
+
         raise HTTPException(status_code=500, detail=f"Error al realizar la consulta: {str(e)}")
