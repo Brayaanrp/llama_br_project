@@ -1,9 +1,13 @@
 import os
+from dotenv import load_dotenv
 import logging
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from llama_parse import LlamaParse
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
+
+# Cargar variables de entorno desde el archivo .env
+load_dotenv()
 
 # Configuración de logging para capturar errores en un archivo log
 logging.basicConfig(filename="error.log", level=logging.ERROR, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -30,9 +34,15 @@ class QueryRequest(BaseModel):
 # Variable global para almacenar el motor de consulta
 query_engine = None
 
+@app.get("/")
+async def root():
+    print("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+    return {"message": "API está funcionando"}
+
 # Endpoint para procesar y leer el archivo PDF
 @app.post("/process")
 async def process_file(request: DocumentRequest):
+    print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
     global query_engine
     try:
         # Verificar si el archivo existe en la ruta especificada
