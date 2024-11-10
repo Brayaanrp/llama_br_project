@@ -1,9 +1,4 @@
-# Cargar las variables de entorno
-from dotenv import load_dotenv
 import os
-load_dotenv()
-
-# Importar dependencias necesarias
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from llama_parse import LlamaParse
@@ -11,6 +6,10 @@ from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 
 # Inicializar FastAPI
 app = FastAPI()
+
+# Obtener las claves API desde las variables de entorno de Railway
+llama_api_key = os.getenv("LLAMA_CLOUD_API_KEY")
+openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Clase para el modelo de solicitud de procesamiento de documentos
 class DocumentRequest(BaseModel):
@@ -55,7 +54,7 @@ async def query_document(request: QueryRequest):
 
         # Instrucción completa para consulta
         query = """
-       Instrucciones para extraer datos de facturas de gas y electricidad:
+Instrucciones para extraer datos de facturas de gas y electricidad:
 
 1. Dirección de suministro: Extrae solo el nombre de la calle o avenida sin números ni caracteres adicionales. Evita signos de puntuación o abreviaturas incorrectas.
 
@@ -195,7 +194,9 @@ Copiar código
    "descuento_gas": "XX,XX Eur",
    "total_electricidad": "XX,XX Eur"
 }
-        """
+
+Nota: Reemplaza "[INSERTAR AQUÍ EL TEXTO REAL DE LA FACTURA]" con el texto de la factura que deseas analizar.
+"""
         
         # Realizar la consulta en el documento
         response = query_engine.query(query)
