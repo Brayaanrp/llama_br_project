@@ -4,25 +4,58 @@ import os
 load_dotenv()
 
 # Importar dependencias necesarias
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 from llama_parse import LlamaParse
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 
-# Configurar el parser
-parser = LlamaParse(result_type="text")  # Puedes cambiar "markdown" a "text" si prefieres solo texto.
+# Inicializar FastAPI
+app = FastAPI()
 
-# Leer y parsear el archivo PDF
-file_extractor = {".pdf": parser}
-documents = SimpleDirectoryReader(input_files=["DOC180724.pdf"], file_extractor=file_extractor).load_data()
+# Clase para el modelo de solicitud de procesamiento de documentos
+class DocumentRequest(BaseModel):
+    file_path: str  # Ruta del archivo PDF a procesar
 
-# Crear un índice a partir de los documentos
-index = VectorStoreIndex.from_documents(documents)
+# Clase para el modelo de solicitud de consulta
+class QueryRequest(BaseModel):
+    query: str  # Consulta para extraer datos específicos del documento procesado
 
-# Crear un motor de consulta
-query_engine = index.as_query_engine()
+# Variable global para almacenar el motor de consulta
+query_engine = None
 
-# Realizar una consulta de ejemplo
-query = """
-Instrucciones para extraer datos de facturas de gas y electricidad:
+# Endpoint para procesar y leer el archivo PDF
+@app.post("/process")
+async def process_file(request: DocumentRequest):
+    global query_engine
+    try:
+        # Configurar el parser
+        parser = LlamaParse(result_type="text")  # Cambia "markdown" a "text" si prefieres solo texto.
+        
+        # Leer y parsear el archivo PDF
+        file_extractor = {".pdf": parser}
+        documents = SimpleDirectoryReader(input_files=[request.file_path], file_extractor=file_extractor).load_data()
+        
+        # Crear un índice a partir de los documentos
+        index = VectorStoreIndex.from_documents(documents)
+
+        # Crear un motor de consulta y almacenarlo globalmente
+        query_engine = index.as_query_engine()
+
+        return {"message": "Archivo procesado exitosamente"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al procesar el archivo: {str(e)}")
+
+# Endpoint para realizar una consulta en el documento ya procesado
+@app.post("/query")
+async def query_document(request: QueryRequest):
+    try:
+        # Verificar si el motor de consulta está disponible
+        if query_engine is None:
+            raise HTTPException(status_code=400, detail="No se ha procesado ningún documento aún.")
+
+        # Instrucción completa para consulta
+        query = """
+       Instrucciones para extraer datos de facturas de gas y electricidad:
 
 1. Dirección de suministro: Extrae solo el nombre de la calle o avenida sin números ni caracteres adicionales. Evita signos de puntuación o abreviaturas incorrectas.
 
@@ -162,8 +195,10 @@ Copiar código
    "descuento_gas": "XX,XX Eur",
    "total_electricidad": "XX,XX Eur"
 }
-
-Nota: Reemplaza "[INSERTAR AQUÍ EL TEXTO REAL DE LA FACTURA]" con el texto de la factura que deseas analizar.
-"""
-response = query_engine.query(query)
-print(response)  # Imprime la respuesta de la consulta
+        """
+        
+        # Realizar la consulta en el documento
+        response = query_engine.query(query)
+        return {"response": response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al realizar la consulta: {str(e)}")
